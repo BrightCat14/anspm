@@ -37,7 +37,7 @@ pub struct _Meta {
     pub description: Option<String>,
 }
 
-const REPOS_CONFIG: &str = "repos.json";
+const REPOS_CONFIG: &str = "repos.list";
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct RepoConfig {
