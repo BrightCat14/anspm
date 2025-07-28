@@ -20,6 +20,9 @@ pub struct PackageInfo {
     pub deps: Vec<String>,
     pub author: String,
     pub license: String,
+    
+    #[serde(skip)]
+    pub base_url: String, 
 }
 
 #[derive(Debug, Deserialize)]
@@ -83,6 +86,13 @@ pub fn fetch_repository(repo_url: &str) -> Result<HashMap<String, PackageInfo>> 
     .with_context(|| "Failed to parse repository index")?;
 
     let mut packages = HashMap::new();
+    let clean_repo_url = repo_url.trim_end_matches('/');
+    for (name, info) in pkgs {
+        let mut pkg: PackageInfo = serde_json::from_value(info.clone())?;
+        pkg.name = name.clone();
+        pkg.base_url = clean_repo_url.to_string();
+        packages.insert(name.clone(), pkg);
+    }
     if let Some(pkgs) = index.get("packages").and_then(Value::as_object) {
         for (name, info) in pkgs {
             packages.insert(
