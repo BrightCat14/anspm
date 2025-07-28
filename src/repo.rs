@@ -91,19 +91,20 @@ pub fn fetch_repository(repo_url: &str) -> Result<HashMap<String, PackageInfo>> 
         for (name, info) in pkgs {
             packages.insert(
                 name.clone(),
-                            PackageInfo {
-                                name: name.clone(),
-                            version: info["version"].as_str().unwrap_or("unknown").to_string(),
-                            description: info["description"].as_str().unwrap_or("No description").to_string(),
-                            url: info["url"].as_str().unwrap_or("").to_string(),
-                            os: info["os"].as_str().unwrap_or("all").to_string(),
-                            arch: info["arch"].as_str().unwrap_or("any").to_string(),
-                            deps: info["deps"].as_array()
-                            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
-                            .unwrap_or_default(),
-                            author: info["author"].as_str().unwrap_or("unknown").to_string(),
-                            license: info["license"].as_str().unwrap_or("unknown").to_string(),
-                            },
+                PackageInfo {
+                    name: name.clone(),
+                    version: info["version"].as_str().unwrap_or("unknown").to_string(),
+                    description: info["description"].as_str().unwrap_or("No description").to_string(),
+                    url: info["url"].as_str().unwrap_or("").to_string(),
+                    os: info["os"].as_str().unwrap_or("all").to_string(),
+                    arch: info["arch"].as_str().unwrap_or("any").to_string(),
+                    deps: info["deps"].as_array()
+                        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                        .unwrap_or_default(),
+                    author: info["author"].as_str().unwrap_or("unknown").to_string(),
+                    license: info["license"].as_str().unwrap_or("unknown").to_string(),
+                    base_url: clean_repo_url.to_string(),
+                },
             );
         }
     }
@@ -116,19 +117,19 @@ pub fn search(query: &str) -> Result<()> {
     let repos = crate::config::get_repos()?;
     let mut results = Vec::new();
 
-    for repo in repos {
-        match fetch_repository(&repo) {
+    for (repo_name, repo_config) in repos.iter() {
+        match fetch_repository(&repo_config.url) {
             Ok(packages) => {
                 for (_, pkg) in packages {
                     if pkg.name.contains(query) || pkg.description.contains(query) {
-                        results.push(pkg);
+                        results.push(pkg.clone());
                     }
                 }
             }
             Err(e) => print_error(&format!("Error fetching repo {}: {}", repo_name, e)),
         }
     }
-
+    
     if results.is_empty() {
         println!("No packages found matching '{}'", query);
         return Ok(());
