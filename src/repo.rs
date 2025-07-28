@@ -180,9 +180,9 @@ pub fn repo_add(url: &str, name: Option<&str>) -> Result<()> {
     config.insert(repo_name.to_string(), RepoConfig {
         url: url.to_string(),
         gpg_key: if url.ends_with('/') {
-            format!("{}gpg-key.asc", url)
+            format!("{}gpg-key.asc", url).into()
         } else {
-            format!("{}/gpg-key.asc", url)
+            format!("{}/gpg-key.asc", url).into()
         },
     });
 
