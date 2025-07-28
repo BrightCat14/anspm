@@ -20,6 +20,9 @@ pub struct PackageInfo {
     pub deps: Vec<String>,
     pub author: String,
     pub license: String,
+    
+    #[serde(skip)]
+    pub base_url: String, 
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,7 +37,7 @@ pub struct _Meta {
     pub description: Option<String>,
 }
 
-const REPOS_CONFIG: &str = "repos.json";
+const REPOS_CONFIG: &str = "repos.list";
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct RepoConfig {
@@ -83,23 +86,25 @@ pub fn fetch_repository(repo_url: &str) -> Result<HashMap<String, PackageInfo>> 
     .with_context(|| "Failed to parse repository index")?;
 
     let mut packages = HashMap::new();
+    let clean_repo_url = repo_url.trim_end_matches('/');
     if let Some(pkgs) = index.get("packages").and_then(Value::as_object) {
         for (name, info) in pkgs {
             packages.insert(
                 name.clone(),
-                            PackageInfo {
-                                name: name.clone(),
-                            version: info["version"].as_str().unwrap_or("unknown").to_string(),
-                            description: info["description"].as_str().unwrap_or("No description").to_string(),
-                            url: info["url"].as_str().unwrap_or("").to_string(),
-                            os: info["os"].as_str().unwrap_or("all").to_string(),
-                            arch: info["arch"].as_str().unwrap_or("any").to_string(),
-                            deps: info["deps"].as_array()
-                            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
-                            .unwrap_or_default(),
-                            author: info["author"].as_str().unwrap_or("unknown").to_string(),
-                            license: info["license"].as_str().unwrap_or("unknown").to_string(),
-                            },
+                PackageInfo {
+                    name: name.clone(),
+                    version: info["version"].as_str().unwrap_or("unknown").to_string(),
+                    description: info["description"].as_str().unwrap_or("No description").to_string(),
+                    url: info["url"].as_str().unwrap_or("").to_string(),
+                    os: info["os"].as_str().unwrap_or("all").to_string(),
+                    arch: info["arch"].as_str().unwrap_or("any").to_string(),
+                    deps: info["deps"].as_array()
+                        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                        .unwrap_or_default(),
+                    author: info["author"].as_str().unwrap_or("unknown").to_string(),
+                    license: info["license"].as_str().unwrap_or("unknown").to_string(),
+                    base_url: clean_repo_url.to_string(),
+                },
             );
         }
     }
@@ -112,19 +117,19 @@ pub fn search(query: &str) -> Result<()> {
     let repos = crate::config::get_repos()?;
     let mut results = Vec::new();
 
-    for repo in repos {
-        match fetch_repository(&repo) {
+    for (repo_name, repo_config) in repos.iter() {
+        match fetch_repository(&repo_config.url) {
             Ok(packages) => {
                 for (_, pkg) in packages {
                     if pkg.name.contains(query) || pkg.description.contains(query) {
-                        results.push(pkg);
+                        results.push(pkg.clone());
                     }
                 }
             }
-            Err(e) => print_error(&format!("Error fetching repo {}: {}", repo, e)),
+            Err(e) => print_error(&format!("Error fetching repo {}: {}", repo_name, e)),
         }
     }
-
+    
     if results.is_empty() {
         println!("No packages found matching '{}'", query);
         return Ok(());
@@ -149,10 +154,9 @@ pub fn search(query: &str) -> Result<()> {
 pub fn find_package(pkg_name: &str) -> Result<PackageInfo> {
     let repos = get_repos()?;
 
-    for repo in repos.iter() {
-        verify_repository(repo)?;
-
-        let packages = fetch_repository(repo)?;
+    for (_name, repo_config) in repos.iter() {
+        verify_repository(&repo_config.url)?;
+        let packages = fetch_repository(&repo_config.url)?;
         if let Some(pkg) = packages.get(pkg_name) {
             return Ok(pkg.clone());
         }
@@ -161,7 +165,7 @@ pub fn find_package(pkg_name: &str) -> Result<PackageInfo> {
     Err(anyhow::anyhow!("Package '{}' not found in any repository", pkg_name))
 }
 
-pub fn repo_add(url: &str, name: Option<&str>, key_url: Option<&str>) -> Result<()> {
+pub fn repo_add(url: &str, name: Option<&str>) -> Result<()> {
     let repo_name = name.unwrap_or_else(|| {
         url.split('/').nth(2).unwrap_or("unknown")
     });
@@ -175,7 +179,11 @@ pub fn repo_add(url: &str, name: Option<&str>, key_url: Option<&str>) -> Result<
 
     config.insert(repo_name.to_string(), RepoConfig {
         url: url.to_string(),
-                  gpg_key: key_url.map(|s| s.to_string()),
+        gpg_key: if url.ends_with('/') {
+            format!("{}gpg-key.asc", url).into()
+        } else {
+            format!("{}/gpg-key.asc", url).into()
+        },
     });
 
     save_repos_config(&config)?;

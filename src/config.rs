@@ -3,17 +3,18 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use dirs;
 use serde_json::json;
+use crate::repo::RepoConfig;
+use std::collections::HashMap;
 
-pub fn get_repos() -> Result<Vec<String>> {
+pub fn get_repos() -> Result<HashMap<String, RepoConfig>> {
     let path = get_config_path("repos.list")?;
     if !path.exists() {
         create_default_repos(&path)?;
     }
-    fs::read_to_string(path)
-    .context("Failed to read repos.list")?
-    .lines()
-    .map(|s| Ok(s.trim().to_string()))
-    .collect::<Result<Vec<_>>>()
+    let content = fs::read_to_string(path)?;
+    let repos: HashMap<String, RepoConfig> = serde_json::from_str(&content)
+        .context("Failed to parse repos.list as JSON")?;
+    Ok(repos)
 }
 
 pub fn get_tracking_file_path() -> Result<PathBuf> {

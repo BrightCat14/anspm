@@ -11,6 +11,7 @@ use crate::config::get_cache_dir;
 use std::fs::File;
 use flate2::read::GzDecoder;
 use tar::Archive;
+use url::Url;
 
 fn update_package_db(pkg_name: &str, pkg: &PackageInfo, files: &[String]) -> Result<()> {
     let mut db = read_tracking_file()?;
@@ -97,7 +98,12 @@ pub fn install(pkg_name: &str, check: bool) -> Result<()> {
     }
 
     print_info(&format!("Starting use package from: {}", pkg.url));
-    let pkg_data = download_pkg_with_cache(pkg_name, &pkg.url)?;
+
+    let full_url = Url::parse(&pkg.base_url)
+        .unwrap()
+        .join(&pkg.url)
+        .unwrap();
+    let pkg_data = download_pkg_with_cache(pkg_name, full_url.as_str())?;
 
     let temp_dir = tempfile::tempdir()?;
     let pkg_path = temp_dir.path().join(format!("{}.pkg", pkg_name));
