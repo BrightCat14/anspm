@@ -29,7 +29,6 @@ pub fn get_tracking_file_path() -> Result<PathBuf> {
         }
     }
 
-    // Для всех остальных случаев (Windows и обычные пользователи Unix)
     let path = dirs::config_dir()
         .ok_or_else(|| anyhow::anyhow!("Could not find config directory"))?
         .join("anspm/installed.db");
