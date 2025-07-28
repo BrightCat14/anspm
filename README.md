@@ -5,6 +5,11 @@
 
 A modern package manager written in Rust, designed for simplicity and performance.
 
+# **What does `anspm` stand for?**
+- **AkaruiNeko's Simple Package Manager** – the original meaning 😺
+- **Another Neat Simple Package Manager** – because simplicity matters
+- **Ain’t No Stupid Package Manager** – because it Just Works™
+
 ## Features
 
 - Fast dependency resolution
