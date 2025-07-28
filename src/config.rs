@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use dirs;
 use serde_json::json;
+use crate::repo::RepoConfig;
 
 pub fn get_repos() -> Result<HashMap<String, RepoConfig>> {
     let path = get_config_path("repos.list")?;
