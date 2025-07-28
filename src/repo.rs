@@ -165,7 +165,7 @@ pub fn find_package(pkg_name: &str) -> Result<PackageInfo> {
     Err(anyhow::anyhow!("Package '{}' not found in any repository", pkg_name))
 }
 
-pub fn repo_add(url: &str, name: Option<&str>, key_url: Option<&str>) -> Result<()> {
+pub fn repo_add(url: &str, name: Option<&str>) -> Result<()> {
     let repo_name = name.unwrap_or_else(|| {
         url.split('/').nth(2).unwrap_or("unknown")
     });
@@ -179,7 +179,11 @@ pub fn repo_add(url: &str, name: Option<&str>, key_url: Option<&str>) -> Result<
 
     config.insert(repo_name.to_string(), RepoConfig {
         url: url.to_string(),
-                  gpg_key: key_url.map(|s| s.to_string()),
+        gpg_key: if url.ends_with('/') {
+            format!("{}gpg-key.asc", url)
+        } else {
+            format!("{}/gpg-key.asc", url)
+        },
     });
 
     save_repos_config(&config)?;
