@@ -9,6 +9,9 @@ use std::path::{Path};
 use std::process::Command;
 use crate::repo::PackageInfo;
 use crate::config::get_cache_dir;
+use std::fs::File;
+use flate2::read::GzDecoder;
+use tar::Archive;
 
 fn update_package_db(pkg_name: &str, pkg: &PackageInfo, files: &[String]) -> Result<()> {
     let mut db = read_tracking_file()?;
@@ -71,13 +74,13 @@ pub fn install(pkg_name: &str, check: bool) -> Result<()> {
                 } else if *installed_ver > *pkg.version {
                     print_info(&format!(
                         "Newer version ({}) is already installed. Downgrading to {} requires anspm reinstall {}.",
-                                        installed_ver, pkg.version, pkg_name
+                        installed_ver, pkg.version, pkg_name
                     ));
                     return Ok(());
                 } else {
                     print_info(&format!(
                         "Package {} is installed ({}). New version {} available.\nRun `anspm update {}` to update.",
-                                        pkg_name, installed_ver, pkg.version, pkg_name
+                        pkg_name, installed_ver, pkg.version, pkg_name
                     ));
                     return Ok(());
                 }
@@ -88,9 +91,9 @@ pub fn install(pkg_name: &str, check: bool) -> Result<()> {
     if pkg.os != "all" && pkg.os != std::env::consts::OS {
         return Err(anyhow::anyhow!(
             "Package '{}' is for {} (your OS is {})",
-                                   pkg_name,
-                                   pkg.os,
-                                   std::env::consts::OS
+            pkg_name,
+            pkg.os,
+            std::env::consts::OS
         ));
     }
 
@@ -102,22 +105,24 @@ pub fn install(pkg_name: &str, check: bool) -> Result<()> {
     fs::write(&pkg_path, &pkg_data)?;
 
     print_info("Installing files to system...");
-    let status = Command::new("sudo")
-    .args(&["tar", "-xzf", pkg_path.to_str().unwrap(), "-C", "/"])
-    .status()?;
 
-    if !status.success() {
-        return Err(anyhow::anyhow!("Failed to install package files"));
-    }
+    let pkg_file = File::open(&pkg_path)?;
+    let decompressor = GzDecoder::new(pkg_file);
+    let mut archive = Archive::new(decompressor);
 
-    let output = Command::new("tar")
-    .args(&["-tzf", pkg_path.to_str().unwrap()])
-    .output()?;
+    archive.unpack("/")?;
 
-    let installed_files: Vec<String> = String::from_utf8(output.stdout)?
-    .lines()
-    .map(|s| format!("/{}", s.trim()))
-    .collect();
+    let pkg_file = File::open(&pkg_path)?;
+    let decompressor = GzDecoder::new(pkg_file);
+    let mut archive = Archive::new(decompressor);
+
+    let installed_files: Vec<String> = archive.entries()?
+        .filter_map(|entry| entry.ok())
+        .map(|entry| {
+            let path = entry.path().unwrap_or_else(|_| std::path::PathBuf::new());
+            format!("/{}", path.display())
+        })
+        .collect();
 
     if installed_files.iter().all(|f| !Path::new(f).exists()) {
         return Err(anyhow::anyhow!("No package files were installed"));
