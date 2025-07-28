@@ -23,5 +23,9 @@ fn main() -> Result<()> {
             cli::RepoCommands::UpdateKeys => repo::repo_update_keys(),
             cli::RepoCommands::Verify { name } => repo::repo_verify(&name),
         },
+        cli::Commands::Why => {
+            println!("Because you deserve a simple package manager. 💖");
+            Ok(())
+        }
     }
 }
