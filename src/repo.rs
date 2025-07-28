@@ -125,7 +125,7 @@ pub fn search(query: &str) -> Result<()> {
                     }
                 }
             }
-            Err(e) => print_error(&format!("Error fetching repo {}: {}", repo, e)),
+            Err(e) => print_error(&format!("Error fetching repo {}: {}", repo_name, e)),
         }
     }
 
@@ -153,10 +153,9 @@ pub fn search(query: &str) -> Result<()> {
 pub fn find_package(pkg_name: &str) -> Result<PackageInfo> {
     let repos = get_repos()?;
 
-    for repo in repos.iter() {
-        verify_repository(repo)?;
-
-        let packages = fetch_repository(repo)?;
+    for (_name, repo_config) in repos.iter() {
+        verify_repository(&repo_config.url)?;
+        let packages = fetch_repository(&repo_config.url)?;
         if let Some(pkg) = packages.get(pkg_name) {
             return Ok(pkg.clone());
         }
