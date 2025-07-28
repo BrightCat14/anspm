@@ -31,6 +31,9 @@ pub enum Commands {
     /// Repository operations
     #[command(subcommand)]
     Repo(RepoCommands),
+
+    #[clap(hide = true)]  // <-- easter egg, because why not?
+    Why,
 }
 
 #[derive(Subcommand)]
