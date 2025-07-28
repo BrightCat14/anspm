@@ -6,7 +6,6 @@ use colored::Colorize;
 use serde_json::json;
 use std::fs;
 use std::path::{Path};
-use std::process::Command;
 use crate::repo::PackageInfo;
 use crate::config::get_cache_dir;
 use std::fs::File;
@@ -119,8 +118,8 @@ pub fn install(pkg_name: &str, check: bool) -> Result<()> {
     let installed_files: Vec<String> = archive.entries()?
         .filter_map(|entry| entry.ok())
         .map(|entry| {
-            let path = entry.path().unwrap_or_else(|_| std::path::PathBuf::new());
-            format!("/{}", path.display())
+            let path_cow = entry.path().unwrap_or_else(|_| std::path::PathBuf::new().into());
+            format!("/{}", path_cow.display())
         })
         .collect();
 
