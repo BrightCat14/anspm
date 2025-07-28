@@ -39,9 +39,7 @@ pub enum RepoCommands {
     Add {
         url: String,
         #[arg(short, long, help = "Custom repository name")]
-        name: Option<String>,
-        #[arg(long, help = "URL for GPG key")]
-        key: Option<String>,
+        name: Option<String>
     },
     /// Remove a repository
     Remove {
