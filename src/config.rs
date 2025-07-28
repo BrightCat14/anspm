@@ -17,13 +17,22 @@ pub fn get_repos() -> Result<Vec<String>> {
 }
 
 pub fn get_tracking_file_path() -> Result<PathBuf> {
-    let path = if cfg!(unix) && nix::unistd::Uid::effective().is_root() {
-        PathBuf::from("/var/lib/anspm/installed.db")
-    } else {
-        dirs::config_dir()
+    #[cfg(unix)]
+    {
+        use nix::unistd::Uid;
+        if Uid::effective().is_root() {
+            let path = PathBuf::from("/var/lib/anspm/installed.db");
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent).context("Failed to create config directory")?;
+            }
+            return Ok(path);
+        }
+    }
+
+    // Для всех остальных случаев (Windows и обычные пользователи Unix)
+    let path = dirs::config_dir()
         .ok_or_else(|| anyhow::anyhow!("Could not find config directory"))?
-        .join("anspm/installed.db")
-    };
+        .join("anspm/installed.db");
 
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).context("Failed to create config directory")?;
