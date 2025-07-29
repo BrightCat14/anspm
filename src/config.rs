@@ -11,9 +11,22 @@ pub fn get_repos() -> Result<HashMap<String, RepoConfig>> {
     if !path.exists() {
         create_default_repos(&path)?;
     }
-    let content = fs::read_to_string(path)?;
+    let content = fs::read_to_string(&path)
+        .context("Failed to read repos.list")?;
+    
+    let content = content.trim();
+    
+    if content.is_empty() {
+        bail!("repos.list is empty");
+    }
+
     let repos: HashMap<String, RepoConfig> = serde_json::from_str(&content)
         .context("Failed to parse repos.list as JSON")?;
+    
+    if repos.is_empty() {
+        bail!("No repositories configured in repos.list");
+    }
+
     Ok(repos)
 }
 
