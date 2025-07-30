@@ -3,7 +3,7 @@
 ![Rust](https://img.shields.io/badge/Rust-1.88+-informational?logo=rust)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-A modern package manager written in Rust, designed for simplicity and performance.
+A modern package manager written in Rust, designed for simplicity and performance. (package manager is little bit broken, please consider create a PR)
 
 # **What does `anspm` stand for?**
 - **AkaruiNeko's Package Manager** – the original meaning 😺
